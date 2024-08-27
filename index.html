@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Player with 3D Visualization</title>
+    <style>
+        body {
+            background-color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            color: white;
+            overflow: hidden;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+        .music-player {
+            width: 350px;
+            padding: 20px;
+            background-color: #222;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+            z-index: 1;
+            transition: transform 0.5s ease;
+            transform-style: preserve-3d;
+        }
+        .album-cover img {
+            width: 100%;
+            border-radius: 10px;
+        }
+        .song-title {
+            margin: 15px 0;
+            font-size: 1.2rem;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .controls button {
+            background-color: transparent;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+        .progress-bar {
+            width: 100%;
+            margin: 10px 0;
+            position: relative;
+        }
+        .progress {
+            width: 100%;
+            height: 5px;
+            background-color: #555;
+            border-radius: 5px;
+            position: relative;
+        }
+        .progress-filled {
+            height: 100%;
+            background-color: white;
+            width: 0;
+            border-radius: 5px;
+        }
+        .time {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #ddd;
+        }
+        .visualization {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            height: 50px;
+        }
+        .bar {
+            width: 15%;
+            height: 100%;
+            background-color: #4caf50;
+            animation: bounce 1s infinite ease-in-out;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(0.2); }
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="particleCanvas"></canvas>
+
+<div id="musicPlayer" class="music-player">
+    <div class="album-cover">
+        <img src="album-cover.jpg" alt="Album Cover">
+    </div>
+    <div class="song-title">( web luky ) Mars IMM</div>
+    <div class="controls">
+        <button onclick="audio.currentTime -= 5">&#9664;&#9664;</button>
+        <button id="play-pause" onclick="togglePlayPause()">&#9654;</button>
+        <button onclick="audio.currentTime += 5">&#9654;&#9654;</button>
+    </div>
+    <div class="progress-bar">
+        <div class="progress">
+            <div id="progress-filled" class="progress-filled"></div>
+        </div>
+    </div>
+    <div class="time">
+        <span id="current-time">0:00</span>
+        <span id="duration">0:00</span>
+    </div>
+    <div class="visualization">
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+    </div>
+</div>
+
+<audio id="audio">
+    <source src="imm.mp3" type="audio/mpeg">
+    Your browser does not support the audio element.
+</audio>
+
+<script>
+    const audio = document.getElementById('audio');
+    const playPauseButton = document.getElementById('play-pause');
+    const progressBar = document.getElementById('progress-filled');
+    const currentTimeElement = document.getElementById('current-time');
+    const durationElement = document.getElementById('duration');
+    const musicPlayer = document.getElementById('musicPlayer');
+
+    // Format waktu dari detik menjadi mm:ss
+    function formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+    }
+
+    // Update progress bar dan waktu
+    audio.addEventListener('timeupdate', () => {
+        currentTimeElement.textContent = formatTime(audio.currentTime);
+        durationElement.textContent = formatTime(audio.duration);
+        progressBar.style.width = (audio.currentTime / audio.duration) * 100 + '%';
+        animateBars();
+        animate3D();
+    });
+
+    // Memastikan durasi lagu ditampilkan setelah metadata audio dimuat
+    audio.addEventListener('loadedmetadata', () => {
+        durationElement.textContent = formatTime(audio.duration);
+    });
+
+    // Fungsi play/pause
+    function togglePlayPause() {
+        if (audio.paused) {
+            audio.play();
+            playPauseButton.innerHTML = '&#10074;&#10074;'; // Pause icon
+            startBarAnimation();
+        } else {
+            audio.pause();
+            playPauseButton.innerHTML = '&#9654;'; // Play icon
+            stopBarAnimation();
+        }
+    }
+
+    // Animasi batang bergerak sesuai musik
+    function animateBars() {
+        const bars = document.querySelectorAll('.bar');
+        bars.forEach(bar => {
+            const height = Math.random() * 100 + '%';
+            bar.style.height = height;
+        });
+    }
+
+    // Memulai animasi batang
+    function startBarAnimation() {
+        const bars = document.querySelectorAll('.bar');
+        bars.forEach(bar => {
+            bar.style.animationPlayState = 'running';
+        });
+    }
+
+    // Menghentikan animasi batang
+    function stopBarAnimation() {
+        const bars = document.querySelectorAll('.bar');
+        bars.forEach(bar => {
+            bar.style.animationPlayState = 'paused';
+        });
+    }
+
+    // Animasi 3D pada pemutar musik
+    function animate3D() {
+        const rotateX = (Math.sin(audio.currentTime) * 10).toFixed(2);
+        const rotateY = (Math.cos(audio.currentTime) * 10).toFixed(2);
+        musicPlayer.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+    }
+
+    // Efek serpihan bintik jatuh
+    const canvas = document.getElementById('particleCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particlesArray = [];
+    const numberOfParticles = 100;
+
+    class Particle {
+        constructor() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.size = Math.random() * 5 + 1;
+            this.speedY = Math.random() * 1 + 0.5;
+            this.color = 'rgba(255, 255, 255, 0.8)';
+        }
+        update() {
+            this.y += this.speedY;
+            if (this.y > canvas.height) {
+                this.y = 0 - this.size;
+                this.x = Math.random() * canvas.width;
+            }
+        }
+        draw() {
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.fill();
+        }
+    }
+
+    function init() {
+        for (let i = 0; i < numberOfParticles; i++) {
+            particlesArray.push(new Particle());
+        }
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particlesArray.forEach(particle => {
+            particle.update();
+            particle.draw();
+        });
+        requestAnimationFrame(animate);
+    }
+
+    init();
+    animate();
+</script>
+
+</body>
+</html>
